@@ -1,4 +1,4 @@
-package com.travel.wanderlog.dto.trip.dto;
+package com.travel.wanderlog.dto.trip;
 
 import java.time.LocalDate;
 

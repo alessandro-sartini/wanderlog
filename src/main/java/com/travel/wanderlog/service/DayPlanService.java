@@ -1,11 +1,16 @@
 package com.travel.wanderlog.service;
 
+import com.travel.wanderlog.dto.activity.ActivityDto;
 import com.travel.wanderlog.dto.dayPlan.DayPlanCreateDto;
 import com.travel.wanderlog.dto.dayPlan.DayPlanDto;
+import com.travel.wanderlog.dto.dayPlan.DayPlanShowDto;
 import com.travel.wanderlog.dto.dayPlan.DayPlanUpdateDto;
 import com.travel.wanderlog.mapper.DayPlanMapper;
+import com.travel.wanderlog.mapper.DayPlanViewMapper;
+import com.travel.wanderlog.model.Activity;
 import com.travel.wanderlog.model.DayPlan;
 import com.travel.wanderlog.model.Trip;
+import com.travel.wanderlog.repository.ActivityRepository;
 import com.travel.wanderlog.repository.DayPlanRepository;
 import com.travel.wanderlog.repository.TripRepository;
 import jakarta.transaction.Transactional;
@@ -21,6 +26,8 @@ public class DayPlanService {
     private final TripRepository tripRepository;
     private final DayPlanRepository dayPlanRepository;
     private final DayPlanMapper mapper;
+    private final ActivityRepository activityRepository;
+    private final DayPlanViewMapper viewMapper;
 
     @Transactional
     public DayPlanDto addDay(Long tripId, DayPlanCreateDto dto) {
@@ -89,5 +96,55 @@ public class DayPlanService {
             throw new IllegalArgumentException("DayPlan non appartiene al trip indicato");
         }
         dayPlanRepository.delete(dp);
+    }
+
+    private DayPlan mustLoadDayPlan(Long tripId, Long dayPlanId) {
+        DayPlan dp = dayPlanRepository.findById(dayPlanId)
+                .orElseThrow(() -> new IllegalArgumentException("DayPlan non trovato: " + dayPlanId));
+        Trip trip = dp.getTrip();
+        if (!trip.getId().equals(tripId)) {
+            throw new IllegalArgumentException("DayPlan non appartiene al trip indicato");
+        }
+        return dp;
+    }
+
+    // @Transactional
+    // public DayPlanDto update(Long tripId, Long dayPlanId, DayPlanUpdateDto dto) {
+    // DayPlan dp = mustLoadDayPlan(tripId, dayPlanId);
+    // mapper.updateFromDto(dto, dp);
+    // return mapper.toDto(dayPlanRepository.save(dp));
+    // }
+
+    // @Transactional
+    // public DayPlanShowDto show(Long tripId, Long dayPlanId) {
+    // DayPlan dp = mustLoadDayPlan(tripId, dayPlanId);
+
+    // List<ActivityDto> activities = activityRepository
+    // .findByDayPlanIdOrderByOrderInDayAsc(dp.getId())
+    // .stream().map(mapper::toDto).toList();
+
+    // return new DayPlanShowDto(
+    // dp.getId(),
+    // dp.getTrip().getId(),
+    // dp.getDate(),
+    // dp.getIndexInTrip(),
+    // dp.getTitle(),
+    // dp.getNote(),
+    // dp.getMainPlaceName(),
+    // dp.getMainPlaceAddress(),
+    // dp.getMainPlacePlaceId(),
+    // dp.getMainPlaceLatitude(),
+    // dp.getMainPlaceLongitude(),
+    // activities);
+    // }
+
+    @Transactional
+    public DayPlanShowDto show(Long tripId, Long dayPlanId) {
+        DayPlan dp = mustLoadDayPlan(tripId, dayPlanId);
+
+        List<Activity> activities = activityRepository
+                .findByDayPlanIdOrderByOrderInDayAsc(dp.getId());
+
+        return viewMapper.toShowDto(dp, activities);
     }
 }

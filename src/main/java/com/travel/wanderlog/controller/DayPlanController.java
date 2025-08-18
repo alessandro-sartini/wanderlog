@@ -2,6 +2,7 @@ package com.travel.wanderlog.controller;
 
 import com.travel.wanderlog.dto.dayPlan.DayPlanCreateDto;
 import com.travel.wanderlog.dto.dayPlan.DayPlanDto;
+import com.travel.wanderlog.dto.dayPlan.DayPlanShowDto;
 import com.travel.wanderlog.dto.dayPlan.DayPlanUpdateDto;
 import com.travel.wanderlog.service.DayPlanService;
 import jakarta.validation.Valid;
@@ -40,5 +41,11 @@ public class DayPlanController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long tripId, @PathVariable Long dayPlanId) {
         service.delete(tripId, dayPlanId);
+    }
+
+    @GetMapping("/{dayPlanId}/show")
+    public DayPlanShowDto show(@PathVariable Long tripId,
+            @PathVariable Long dayPlanId) {
+        return service.show(tripId, dayPlanId);
     }
 }

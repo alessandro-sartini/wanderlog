@@ -1,10 +1,16 @@
 package com.travel.wanderlog.service;
 
-import com.travel.wanderlog.dto.trip.dto.TripCreateDto;
-import com.travel.wanderlog.dto.trip.dto.TripDto;
+import com.travel.wanderlog.dto.dayPlan.DayPlanSummaryDto;
+import com.travel.wanderlog.dto.trip.TripCreateDto;
+import com.travel.wanderlog.dto.trip.TripDto;
+import com.travel.wanderlog.dto.trip.TripShowDto;
+import com.travel.wanderlog.dto.trip.TripUpdateDto;
+import com.travel.wanderlog.dto.trip.VisibilityDto;
 import com.travel.wanderlog.mapper.TripMapper;
+import com.travel.wanderlog.model.DayPlan;
 import com.travel.wanderlog.model.Trip;
 import com.travel.wanderlog.model.User;
+import com.travel.wanderlog.repository.ActivityRepository;
 import com.travel.wanderlog.repository.TripRepository;
 import com.travel.wanderlog.repository.UserRepository;
 
@@ -15,42 +21,71 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
-@Service
-@RequiredArgsConstructor
+@Service @RequiredArgsConstructor
 public class TripService {
 
     private final TripRepository tripRepository;
-    private final TripMapper mapper;
     private final UserRepository userRepository;
+    private final ActivityRepository activityRepository;
+    private final TripMapper mapper;
 
     @Transactional
     public TripDto create(TripCreateDto dto) {
         User owner = userRepository.findByEmail("demo@travelsage.io")
-                .orElseThrow(() -> new IllegalStateException("Owner demo non trovato (seed dev mancante)"));
+                .orElseThrow(() -> new IllegalStateException("Owner demo non trovato"));
+        if (dto.startDate() != null && dto.endDate() != null && dto.endDate().isBefore(dto.startDate())) {
+            throw new IllegalArgumentException("endDate non può precedere startDate");
+        }
+        Trip entity = mapper.toEntity(dto, owner);
+        return mapper.toDto(tripRepository.save(entity));
+    }
 
-        if (dto.startDate() != null && dto.endDate() != null &&
-                dto.endDate().isBefore(dto.startDate())) {
+    @Transactional
+    public TripDto update(Long id, TripUpdateDto dto) {
+        Trip t = tripRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Trip non trovato: " + id));
+
+        // valida solo se entrambi presenti
+        if (dto.startDate() != null && dto.endDate() != null && dto.endDate().isBefore(dto.startDate())) {
             throw new IllegalArgumentException("endDate non può precedere startDate");
         }
 
-        Trip entity = mapper.toEntity(dto, owner); // <-- mapping MapStruct (dto + owner)
-        Trip saved = tripRepository.save(entity);
-        return mapper.toDto(saved); // <-- mapping MapStruct (entity -> dto)
+        mapper.updateFromDto(dto, t);
+        return mapper.toDto(tripRepository.save(t));
+    }
+
+    @Transactional
+    public TripShowDto show(Long id) {
+        Trip t = tripRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Trip non trovato: " + id));
+
+        List<DayPlan> days = tripRepository.findDaysByTripIdOrderByIndex(id);
+
+        List<DayPlanSummaryDto> daySummaries = days.stream()
+                .map(dp -> new DayPlanSummaryDto(
+                        dp.getId(),
+                        dp.getIndexInTrip(),
+                        dp.getDate(),
+                        dp.getTitle(),
+                        Math.toIntExact(activityRepository.countByDayPlanId(dp.getId()))
+                )).toList();
+
+        return new TripShowDto(
+                t.getId(),
+                t.getOwner().getId(),
+                t.getTitle(),
+                t.getDescription(),
+                t.getStartDate(),
+                t.getEndDate(),
+                VisibilityDto.valueOf(t.getVisibility().name()),
+                daySummaries
+        );
     }
 
     @Transactional
     public TripDto getById(Long id) {
         Trip t = tripRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Trip non trovato: id=" + id));
+                .orElseThrow(() -> new IllegalArgumentException("Trip non trovato: " + id));
         return mapper.toDto(t);
     }
-
-    // src/main/java/com/travel/wanderlog/service/TripService.java
-    @Transactional
-    public List<TripDto> listMine() {
-        String email = "demo@travelsage.io";
-        var trips = tripRepository.findAllByOwnerEmailOrderByIdDesc(email);
-        return trips.stream().map(mapper::toDto).toList();
-    }
-
 }

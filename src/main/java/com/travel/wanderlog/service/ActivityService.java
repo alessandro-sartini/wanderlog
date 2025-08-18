@@ -51,30 +51,30 @@ public class ActivityService {
     // }
 
     @Transactional
-public ActivityDto add(Long tripId, Long dayPlanId, ActivityCreateDto dto) {
-    DayPlan dp = mustLoadDayPlan(tripId, dayPlanId);
+    public ActivityDto add(Long tripId, Long dayPlanId, ActivityCreateDto dto) {
+        DayPlan dp = mustLoadDayPlan(tripId, dayPlanId);
 
-    int max = activityRepository.findMaxOrderInDay(dp.getId()); // 0 se non ce ne sono
-    int newOrder;
+        int max = activityRepository.findMaxOrderInDay(dp.getId()); // 0 se non ce ne sono
+        int newOrder;
 
-    if (dto.orderInDay() == null) {
-        // append in coda
-        newOrder = max + 1;
-    } else {
-        // clamp a [1, max+1]
-        newOrder = Math.max(1, Math.min(dto.orderInDay(), max + 1));
-        if (newOrder <= max) {
-            // inserisco in mezzo: sposto su chi sta da newOrder .. max
-            activityRepository.shiftUpRange(dp.getId(), newOrder, max);
+        if (dto.orderInDay() == null) {
+            // append in coda
+            newOrder = max + 1;
+        } else {
+            // clamp a [1, max+1]
+            newOrder = Math.max(1, Math.min(dto.orderInDay(), max + 1));
+            if (newOrder <= max) {
+                // inserisco in mezzo: sposto su chi sta da newOrder .. max
+                activityRepository.shiftUpRange(dp.getId(), newOrder, max);
+            }
         }
+
+        Activity entity = mapper.toEntity(dto, dp);
+        entity.setOrderInDay(newOrder);
+
+        Activity saved = activityRepository.save(entity);
+        return mapper.toDto(saved);
     }
-
-    Activity entity = mapper.toEntity(dto, dp);
-    entity.setOrderInDay(newOrder);
-
-    Activity saved = activityRepository.save(entity);
-    return mapper.toDto(saved);
-}
 
     @Transactional
     public List<ActivityDto> list(Long tripId, Long dayPlanId) {
@@ -171,6 +171,18 @@ public ActivityDto add(Long tripId, Long dayPlanId, ActivityCreateDto dto) {
         int removedOrder = entity.getOrderInDay();
         activityRepository.delete(entity);
         activityRepository.shiftDownAfter(dp.getId(), removedOrder);
+    }
+
+    // ActivityService.java (aggiungi show singolo)
+    @Transactional
+    public ActivityDto show(Long tripId, Long dayPlanId, Long activityId) {
+        DayPlan dp = mustLoadDayPlan(tripId, dayPlanId);
+        Activity a = activityRepository.findById(activityId)
+                .orElseThrow(() -> new IllegalArgumentException("Activity non trovata: id=" + activityId));
+        if (!a.getDayPlan().getId().equals(dp.getId())) {
+            throw new IllegalArgumentException("Activity non appartiene al dayPlan indicato");
+        }
+        return mapper.toDto(a);
     }
 
 }

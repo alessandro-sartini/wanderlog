@@ -48,4 +48,6 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
 
   @Query("select coalesce(max(a.orderInDay),0) from Activity a where a.dayPlan.id = :dayPlanId")
   int findMaxOrderInDay(@Param("dayPlanId") Long dayPlanId);
+
+  long countByDayPlanId(Long dayPlanId);
 }

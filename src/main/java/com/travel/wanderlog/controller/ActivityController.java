@@ -47,4 +47,11 @@ public class ActivityController {
             @PathVariable Long activityId) {
         service.delete(tripId, dayPlanId, activityId);
     }
+
+    @GetMapping("/{activityId}")
+    public ActivityDto show(@PathVariable Long tripId,
+            @PathVariable Long dayPlanId,
+            @PathVariable Long activityId) {
+        return service.show(tripId, dayPlanId, activityId);
+    }
 }
