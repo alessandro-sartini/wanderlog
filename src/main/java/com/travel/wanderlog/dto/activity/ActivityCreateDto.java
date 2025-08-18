@@ -13,5 +13,5 @@ public record ActivityCreateDto(
         String placePlaceId,
         Double placeLatitude,
         Double placeLongitude,
-        @NotNull Integer orderInDay) {
+        @Min(1) Integer orderInDay) {
 }

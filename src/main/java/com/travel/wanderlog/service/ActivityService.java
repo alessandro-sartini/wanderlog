@@ -35,18 +35,46 @@ public class ActivityService {
         return dp;
     }
 
+    // @Transactional
+    // public ActivityDto add(Long tripId, Long dayPlanId, ActivityCreateDto dto) {
+    // DayPlan dp = mustLoadDayPlan(tripId, dayPlanId);
+
+    // if (activityRepository.existsByDayPlanIdAndOrderInDay(dp.getId(),
+    // dto.orderInDay())) {
+    // throw new IllegalArgumentException("orderInDay già usato per questo
+    // dayPlan");
+    // }
+
+    // Activity entity = mapper.toEntity(dto, dp);
+    // Activity saved = activityRepository.save(entity);
+    // return mapper.toDto(saved);
+    // }
+
     @Transactional
-    public ActivityDto add(Long tripId, Long dayPlanId, ActivityCreateDto dto) {
-        DayPlan dp = mustLoadDayPlan(tripId, dayPlanId);
+public ActivityDto add(Long tripId, Long dayPlanId, ActivityCreateDto dto) {
+    DayPlan dp = mustLoadDayPlan(tripId, dayPlanId);
 
-        if (activityRepository.existsByDayPlanIdAndOrderInDay(dp.getId(), dto.orderInDay())) {
-            throw new IllegalArgumentException("orderInDay già usato per questo dayPlan");
+    int max = activityRepository.findMaxOrderInDay(dp.getId()); // 0 se non ce ne sono
+    int newOrder;
+
+    if (dto.orderInDay() == null) {
+        // append in coda
+        newOrder = max + 1;
+    } else {
+        // clamp a [1, max+1]
+        newOrder = Math.max(1, Math.min(dto.orderInDay(), max + 1));
+        if (newOrder <= max) {
+            // inserisco in mezzo: sposto su chi sta da newOrder .. max
+            activityRepository.shiftUpRange(dp.getId(), newOrder, max);
         }
-
-        Activity entity = mapper.toEntity(dto, dp);
-        Activity saved = activityRepository.save(entity);
-        return mapper.toDto(saved);
     }
+
+    Activity entity = mapper.toEntity(dto, dp);
+    entity.setOrderInDay(newOrder);
+
+    Activity saved = activityRepository.save(entity);
+    return mapper.toDto(saved);
+}
 
     @Transactional
     public List<ActivityDto> list(Long tripId, Long dayPlanId) {
@@ -55,37 +83,94 @@ public class ActivityService {
                 .stream().map(mapper::toDto).toList();
     }
 
+    // @Transactional
+    // public ActivityDto update(Long tripId, Long dayPlanId, Long activityId,
+    // ActivityUpdateDto dto) {
+
+    // DayPlan dp = mustLoadDayPlan(tripId, dayPlanId);
+    // Activity a = activityRepository.findById(activityId)
+    // .orElseThrow(() -> new IllegalArgumentException("Activity non trovata: id=" +
+    // activityId));
+    // if (!a.getDayPlan().getId().equals(dp.getId())) {
+    // throw new IllegalArgumentException("Activity non appartiene al dayPlan
+    // indicato");
+    // }
+
+    // // se cambia orderInDay, verifica unicità
+    // if (dto.orderInDay() != null && !dto.orderInDay().equals(a.getOrderInDay()))
+    // {
+    // if (activityRepository.existsByDayPlanIdAndOrderInDay(dp.getId(),
+    // dto.orderInDay())) {
+    // throw new IllegalArgumentException("orderInDay già usato per questo
+    // dayPlan");
+    // }
+    // a.setOrderInDay(dto.orderInDay());
+    // }
+
+    // mapper.updateFromDto(dto, a);
+    // Activity saved = activityRepository.save(a);
+    // return mapper.toDto(saved);
+    // }
+
     @Transactional
     public ActivityDto update(Long tripId, Long dayPlanId, Long activityId, ActivityUpdateDto dto) {
-
         DayPlan dp = mustLoadDayPlan(tripId, dayPlanId);
+
         Activity a = activityRepository.findById(activityId)
                 .orElseThrow(() -> new IllegalArgumentException("Activity non trovata: id=" + activityId));
         if (!a.getDayPlan().getId().equals(dp.getId())) {
             throw new IllegalArgumentException("Activity non appartiene al dayPlan indicato");
         }
 
-        // se cambia orderInDay, verifica unicità
         if (dto.orderInDay() != null && !dto.orderInDay().equals(a.getOrderInDay())) {
-            if (activityRepository.existsByDayPlanIdAndOrderInDay(dp.getId(), dto.orderInDay())) {
-                throw new IllegalArgumentException("orderInDay già usato per questo dayPlan");
+            int oldOrder = a.getOrderInDay();
+            int maxOrder = activityRepository.findByDayPlanIdOrderByOrderInDayAsc(dp.getId()).size();
+            int newOrder = Math.max(1, Math.min(dto.orderInDay(), maxOrder));
+
+            if (newOrder < oldOrder) {
+                // muovo su: [newOrder .. oldOrder-1] ++
+                activityRepository.shiftUpRange(dp.getId(), newOrder, oldOrder - 1);
+            } else {
+                // muovo giù: [oldOrder+1 .. newOrder] --
+                activityRepository.shiftDownRange(dp.getId(), oldOrder + 1, newOrder);
             }
-            a.setOrderInDay(dto.orderInDay());
+            a.setOrderInDay(newOrder);
         }
 
+        // aggiorna gli altri campi (NullValuePropertyMappingStrategy.IGNORE in
+        // MapStruct)
         mapper.updateFromDto(dto, a);
+
         Activity saved = activityRepository.save(a);
         return mapper.toDto(saved);
     }
 
+    // @Transactional
+    // public void delete(Long tripId, Long dayPlanId, Long activityId) {
+    // DayPlan dp = mustLoadDayPlan(tripId, dayPlanId);
+    // Activity a = activityRepository.findById(activityId)
+    // .orElseThrow(() -> new IllegalArgumentException("Activity non trovata: id=" +
+    // activityId));
+    // if (!a.getDayPlan().getId().equals(dp.getId())) {
+    // throw new IllegalArgumentException("Activity non appartiene al dayPlan
+    // indicato");
+    // }
+    // activityRepository.delete(a);
+    // }
+
     @Transactional
     public void delete(Long tripId, Long dayPlanId, Long activityId) {
         DayPlan dp = mustLoadDayPlan(tripId, dayPlanId);
-        Activity a = activityRepository.findById(activityId)
-                .orElseThrow(() -> new IllegalArgumentException("Activity non trovata: id=" + activityId));
-        if (!a.getDayPlan().getId().equals(dp.getId())) {
+
+        Activity entity = activityRepository.findById(activityId)
+                .orElseThrow(() -> new IllegalArgumentException("Activity non trovata: " + activityId));
+        if (!entity.getDayPlan().getId().equals(dp.getId())) {
             throw new IllegalArgumentException("Activity non appartiene al dayPlan indicato");
         }
-        activityRepository.delete(a);
+
+        int removedOrder = entity.getOrderInDay();
+        activityRepository.delete(entity);
+        activityRepository.shiftDownAfter(dp.getId(), removedOrder);
     }
+
 }
