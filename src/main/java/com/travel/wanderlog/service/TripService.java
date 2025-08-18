@@ -7,10 +7,12 @@ import com.travel.wanderlog.dto.trip.TripShowDto;
 import com.travel.wanderlog.dto.trip.TripUpdateDto;
 import com.travel.wanderlog.dto.trip.VisibilityDto;
 import com.travel.wanderlog.mapper.TripMapper;
+import com.travel.wanderlog.mapper.TripViewMapper;
 import com.travel.wanderlog.model.DayPlan;
 import com.travel.wanderlog.model.Trip;
 import com.travel.wanderlog.model.User;
 import com.travel.wanderlog.repository.ActivityRepository;
+import com.travel.wanderlog.repository.DayPlanRepository;
 import com.travel.wanderlog.repository.TripRepository;
 import com.travel.wanderlog.repository.UserRepository;
 
@@ -21,13 +23,15 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
-@Service @RequiredArgsConstructor
+@Service
+@RequiredArgsConstructor
 public class TripService {
 
     private final TripRepository tripRepository;
-    private final UserRepository userRepository;
-    private final ActivityRepository activityRepository;
+    private final DayPlanRepository dayPlanRepository;
     private final TripMapper mapper;
+    private final TripViewMapper viewMapper;
+    private final UserRepository userRepository;
 
     @Transactional
     public TripDto create(TripCreateDto dto) {
@@ -54,32 +58,40 @@ public class TripService {
         return mapper.toDto(tripRepository.save(t));
     }
 
+    // @Transactional
+    // public TripShowDto show(Long id) {
+    // Trip t = tripRepository.findById(id)
+    // .orElseThrow(() -> new IllegalArgumentException("Trip non trovato: " + id));
+
+    // List<DayPlan> days = tripRepository.findDaysByTripIdOrderByIndex(id);
+
+    // List<DayPlanSummaryDto> daySummaries = days.stream()
+    // .map(dp -> new DayPlanSummaryDto(
+    // dp.getId(),
+    // dp.getIndexInTrip(),
+    // dp.getDate(),
+    // dp.getTitle(),
+    // Math.toIntExact(activityRepository.countByDayPlanId(dp.getId()))
+    // )).toList();
+
+    // return new TripShowDto(
+    // t.getId(),
+    // t.getOwner().getId(),
+    // t.getTitle(),
+    // t.getDescription(),
+    // t.getStartDate(),
+    // t.getEndDate(),
+    // VisibilityDto.valueOf(t.getVisibility().name()),
+    // daySummaries
+    // );
+    // }
     @Transactional
     public TripShowDto show(Long id) {
         Trip t = tripRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Trip non trovato: " + id));
+                .orElseThrow(() -> new IllegalArgumentException("Trip non trovato: id=" + id));
 
-        List<DayPlan> days = tripRepository.findDaysByTripIdOrderByIndex(id);
-
-        List<DayPlanSummaryDto> daySummaries = days.stream()
-                .map(dp -> new DayPlanSummaryDto(
-                        dp.getId(),
-                        dp.getIndexInTrip(),
-                        dp.getDate(),
-                        dp.getTitle(),
-                        Math.toIntExact(activityRepository.countByDayPlanId(dp.getId()))
-                )).toList();
-
-        return new TripShowDto(
-                t.getId(),
-                t.getOwner().getId(),
-                t.getTitle(),
-                t.getDescription(),
-                t.getStartDate(),
-                t.getEndDate(),
-                VisibilityDto.valueOf(t.getVisibility().name()),
-                daySummaries
-        );
+        var days = dayPlanRepository.findByTripIdOrderByIndexInTripAsc(id);
+        return viewMapper.toShowDto(t, days);
     }
 
     @Transactional

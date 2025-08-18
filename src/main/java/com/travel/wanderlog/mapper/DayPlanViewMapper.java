@@ -7,7 +7,6 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
 
-import com.travel.wanderlog.dto.activity.ActivityDto;
 import com.travel.wanderlog.dto.dayPlan.DayPlanShowDto;
 import com.travel.wanderlog.model.Activity;
 import com.travel.wanderlog.model.DayPlan;
