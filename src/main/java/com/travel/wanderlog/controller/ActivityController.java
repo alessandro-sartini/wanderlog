@@ -3,6 +3,7 @@ package com.travel.wanderlog.controller;
 import com.travel.wanderlog.dto.activity.ActivityCreateDto;
 import com.travel.wanderlog.dto.activity.ActivityDto;
 import com.travel.wanderlog.dto.activity.ActivityUpdateDto;
+import com.travel.wanderlog.dto.order.ActivityReorderDto;
 import com.travel.wanderlog.service.ActivityService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -53,5 +54,20 @@ public class ActivityController {
             @PathVariable Long dayPlanId,
             @PathVariable Long activityId) {
         return service.show(tripId, dayPlanId, activityId);
+    }
+
+    /**
+     * PATCH per riordinare una activity alla posizione target.
+     * Esempio URL:
+     * PATCH /api/trips/1/days/10/activities/55/reorder
+     * Body:
+     * { "targetOrder": 2 }
+     */
+    @PatchMapping("/{activityId}/reorder")
+    public ActivityDto reorder(@PathVariable Long tripId,
+            @PathVariable Long dayPlanId,
+            @PathVariable Long activityId,
+            @Valid @RequestBody ActivityReorderDto dto) {
+        return service.reorder(tripId, dayPlanId, activityId, dto);
     }
 }

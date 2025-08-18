@@ -1,25 +1,19 @@
 package com.travel.wanderlog.service;
 
-import com.travel.wanderlog.dto.dayPlan.DayPlanSummaryDto;
 import com.travel.wanderlog.dto.trip.TripCreateDto;
 import com.travel.wanderlog.dto.trip.TripDto;
 import com.travel.wanderlog.dto.trip.TripShowDto;
 import com.travel.wanderlog.dto.trip.TripUpdateDto;
-import com.travel.wanderlog.dto.trip.VisibilityDto;
 import com.travel.wanderlog.mapper.TripMapper;
 import com.travel.wanderlog.mapper.TripViewMapper;
-import com.travel.wanderlog.model.DayPlan;
 import com.travel.wanderlog.model.Trip;
 import com.travel.wanderlog.model.User;
-import com.travel.wanderlog.repository.ActivityRepository;
 import com.travel.wanderlog.repository.DayPlanRepository;
 import com.travel.wanderlog.repository.TripRepository;
 import com.travel.wanderlog.repository.UserRepository;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-
-import java.util.List;
 
 import org.springframework.stereotype.Service;
 

@@ -3,6 +3,7 @@ package com.travel.wanderlog.service;
 import com.travel.wanderlog.dto.activity.ActivityCreateDto;
 import com.travel.wanderlog.dto.activity.ActivityDto;
 import com.travel.wanderlog.dto.activity.ActivityUpdateDto;
+import com.travel.wanderlog.dto.order.ActivityReorderDto;
 import com.travel.wanderlog.mapper.ActivityMapper;
 import com.travel.wanderlog.model.Activity;
 import com.travel.wanderlog.model.DayPlan;
@@ -183,6 +184,45 @@ public class ActivityService {
             throw new IllegalArgumentException("Activity non appartiene al dayPlan indicato");
         }
         return mapper.toDto(a);
+    }
+
+    @Transactional
+    public ActivityDto reorder(Long tripId, Long dayPlanId, Long activityId, ActivityReorderDto dto) {
+        DayPlan dp = mustLoadDayPlan(tripId, dayPlanId);
+
+        Activity a = activityRepository.findById(activityId)
+                .orElseThrow(() -> new IllegalArgumentException("Activity non trovata: id=" + activityId));
+        if (!a.getDayPlan().getId().equals(dp.getId())) {
+            throw new IllegalArgumentException("Activity non appartiene al dayPlan indicato");
+        }
+
+        int current = a.getOrderInDay();
+        int max = activityRepository.maxOrderInDay(dp.getId());
+
+        // clamp target dentro [1..max] (se non ci sono attività, max può essere 0)
+        int target = Math.max(1, Math.min(dto.targetOrder(), Math.max(1, max)));
+
+        if (target == current) {
+            return mapper.toDto(a); // niente da fare
+        }
+
+        // 1) Parcheggia l’activity (evita qualsiasi collisione con l’UK)
+        activityRepository.park(a.getId());
+
+        // 2) Shift del range "altri"
+        if (target < current) {
+            // es: 5 -> 2, sposto SU [2..4]: 2->3, 3->4, 4->5
+            activityRepository.shiftUpRange(dp.getId(), target, current - 1);
+        } else {
+            // es: 2 -> 5, sposto GIÙ [3..5]: 3->2, 4->3, 5->4
+            activityRepository.shiftDownRange(dp.getId(), current + 1, target);
+        }
+
+        // 3) Posiziona l’activity al target
+        a.setOrderInDay(target);
+        Activity saved = activityRepository.save(a);
+
+        return mapper.toDto(saved);
     }
 
 }
