@@ -12,6 +12,8 @@ import java.util.List;
 public interface ActivityRepository extends JpaRepository<Activity, Long> {
   List<Activity> findByDayPlanIdOrderByOrderInDayAsc(Long dayPlanId);
 
+  void deleteAllByDayPlanId(Long dayPlanId);
+
   boolean existsByDayPlanIdAndOrderInDay(Long dayPlanId, Integer orderInDay);
 
   @Modifying

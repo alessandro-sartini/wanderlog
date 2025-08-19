@@ -11,7 +11,11 @@ import org.mapstruct.*;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface TripMapper {
 
-    @Mapping(target = "owner", source = "owner")
+    @Mapping(target = "id", ignore = true)
+    // @Mapping(target = "version", ignore = true) // se usi @Version
+    @Mapping(target = "owner", ignore = true) // la setti nel service
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
     Trip toEntity(TripCreateDto dto, User owner);
 
     @Mapping(target = "ownerId", source = "owner.id")

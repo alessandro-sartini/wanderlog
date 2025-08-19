@@ -29,21 +29,58 @@ public class DayPlanService {
     private final ActivityRepository activityRepository;
     private final DayPlanViewMapper viewMapper;
 
+    // @Transactional
+    // public DayPlanDto addDay(Long tripId, DayPlanCreateDto dto) {
+    // Trip trip = tripRepository.findById(tripId)
+    // .orElseThrow(() -> new IllegalArgumentException("Trip non trovato: id=" +
+    // tripId));
+
+    // if (dayPlanRepository.existsByTripIdAndIndexInTrip(tripId,
+    // dto.indexInTrip())) {
+    // throw new IllegalArgumentException("indexInTrip già usato per questo trip");
+    // }
+    // if (trip.getStartDate() != null && trip.getEndDate() != null && dto.date() !=
+    // null) {
+    // if (dto.date().isBefore(trip.getStartDate()) ||
+    // dto.date().isAfter(trip.getEndDate())) {
+    // throw new IllegalArgumentException("date fuori dal range del trip");
+    // }
+    // }
+
+    // DayPlan entity = mapper.toEntity(dto, trip);
+    // DayPlan saved = dayPlanRepository.save(entity);
+    // return mapper.toDto(saved);
+    // }
     @Transactional
     public DayPlanDto addDay(Long tripId, DayPlanCreateDto dto) {
         Trip trip = tripRepository.findById(tripId)
                 .orElseThrow(() -> new IllegalArgumentException("Trip non trovato: id=" + tripId));
 
-        if (dayPlanRepository.existsByTripIdAndIndexInTrip(tripId, dto.indexInTrip())) {
-            throw new IllegalArgumentException("indexInTrip già usato per questo trip");
-        }
+        // opzionale: validazioni su date nel range del trip come avevi già
         if (trip.getStartDate() != null && trip.getEndDate() != null && dto.date() != null) {
             if (dto.date().isBefore(trip.getStartDate()) || dto.date().isAfter(trip.getEndDate())) {
                 throw new IllegalArgumentException("date fuori dal range del trip");
             }
         }
 
+        int max = dayPlanRepository.maxIndexInTrip(tripId);
+        int newIndex;
+
+        if (dto.indexInTrip() == null) {
+            // append in coda
+            newIndex = max + 1;
+        } else {
+            // clamp a [1 .. max+1]
+            newIndex = Math.max(1, Math.min(dto.indexInTrip(), max + 1));
+            if (newIndex <= max) {
+                // inserimento in mezzo: fai spazio spostando su [newIndex .. max]
+                dayPlanRepository.shiftUpRange(tripId, newIndex, max);
+            }
+        }
+
         DayPlan entity = mapper.toEntity(dto, trip);
+        entity.setIndexInTrip(newIndex);
+
         DayPlan saved = dayPlanRepository.save(entity);
         return mapper.toDto(saved);
     }
@@ -65,15 +102,7 @@ public class DayPlanService {
             throw new IllegalArgumentException("DayPlan non appartiene al trip indicato");
         }
 
-        // se cambia l'indice, verifica unicità
-        if (dto.indexInTrip() != null && !dto.indexInTrip().equals(dp.getIndexInTrip())) {
-            if (dayPlanRepository.existsByTripIdAndIndexInTrip(tripId, dto.indexInTrip())) {
-                throw new IllegalArgumentException("indexInTrip già usato per questo trip");
-            }
-            dp.setIndexInTrip(dto.indexInTrip());
-        }
-
-        // validazione date nel range del trip
+        // validazione date nel range del trip (come avevi già)
         if (dto.date() != null) {
             Trip trip = dp.getTrip();
             if (trip.getStartDate() != null && trip.getEndDate() != null) {
@@ -83,7 +112,34 @@ public class DayPlanService {
             }
         }
 
-        mapper.updateFromDto(dto, dp); // PATCH: aggiorna solo i campi != null
+        // cambio indice con clamp + PARKING per evitare collisioni sull’UK
+        if (dto.indexInTrip() != null && !dto.indexInTrip().equals(dp.getIndexInTrip())) {
+            int oldIdx = dp.getIndexInTrip();
+            int max = dayPlanRepository.maxIndexInTrip(tripId); // N attuale
+            int target = Math.max(1, Math.min(dto.indexInTrip(), max)); // clamp a [1..N]
+
+            if (target != oldIdx) {
+                // 1) Parcheggia il giorno (lo togli dal “giro” dell’UK)
+                dayPlanRepository.park(dp.getId());
+                dp.setIndexInTrip(0); // tieni allineata anche l’entity in memoria
+
+                // 2) Shifta gli altri per chiudere/aprire il "buco"
+                if (target < oldIdx) {
+                    // es: 5 -> 2 => [2..4] ++
+                    dayPlanRepository.shiftUpRange(tripId, target, oldIdx - 1);
+                } else {
+                    // es: 2 -> 5 => [3..5] --
+                    dayPlanRepository.shiftDownRange(tripId, oldIdx + 1, target);
+                }
+
+                // 3) Rimetti il giorno nella posizione target
+                dp.setIndexInTrip(target);
+            }
+        }
+
+        // altri campi (title/note/date/poi…) via mapper (PATCH: solo non-null)
+        mapper.updateFromDto(dto, dp);
+
         DayPlan saved = dayPlanRepository.save(dp);
         return mapper.toDto(saved);
     }
@@ -95,7 +151,17 @@ public class DayPlanService {
         if (!dp.getTrip().getId().equals(tripId)) {
             throw new IllegalArgumentException("DayPlan non appartiene al trip indicato");
         }
+
+        int removedIndex = dp.getIndexInTrip();
+
+        // 1) elimina prima tutte le attività del giorno
+        activityRepository.deleteAllByDayPlanId(dp.getId());
+
+        // 2) elimina il day plan
         dayPlanRepository.delete(dp);
+
+        // 3) compatta gli indici dei restanti day plan del trip
+        dayPlanRepository.shiftDownAfter(tripId, removedIndex);
     }
 
     private DayPlan mustLoadDayPlan(Long tripId, Long dayPlanId) {
