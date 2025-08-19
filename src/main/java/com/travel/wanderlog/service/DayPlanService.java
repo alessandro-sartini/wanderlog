@@ -1,6 +1,5 @@
 package com.travel.wanderlog.service;
 
-import com.travel.wanderlog.dto.activity.ActivityDto;
 import com.travel.wanderlog.dto.dayPlan.DayPlanCreateDto;
 import com.travel.wanderlog.dto.dayPlan.DayPlanDto;
 import com.travel.wanderlog.dto.dayPlan.DayPlanShowDto;
