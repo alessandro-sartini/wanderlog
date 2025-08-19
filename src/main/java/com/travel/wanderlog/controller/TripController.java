@@ -2,6 +2,7 @@ package com.travel.wanderlog.controller;
 
 import com.travel.wanderlog.dto.trip.TripCreateDto;
 import com.travel.wanderlog.dto.trip.TripDto;
+import com.travel.wanderlog.dto.trip.TripShowDto;
 import com.travel.wanderlog.dto.trip.TripUpdateDto;
 import com.travel.wanderlog.service.TripService;
 
@@ -47,4 +48,10 @@ public class TripController {
         tripService.reorder(id, to);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/{tripId}")
+    public TripShowDto show(@PathVariable Long tripId) {
+        return tripService.show(tripId);
+    }
+
 }

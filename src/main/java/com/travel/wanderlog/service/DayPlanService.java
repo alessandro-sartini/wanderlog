@@ -212,4 +212,39 @@ public class DayPlanService {
 
         return viewMapper.toShowDto(dp, activities);
     }
+
+    @Transactional
+    public void reorder(Long tripId, Long dayPlanId, int to) {
+        var dp = dayPlanRepository.findById(dayPlanId)
+                .orElseThrow(() -> new IllegalArgumentException("DayPlan non trovato: id=" + dayPlanId));
+
+        if (!dp.getTrip().getId().equals(tripId)) {
+            throw new IllegalArgumentException("DayPlan non appartiene al trip indicato");
+        }
+
+        int from = dp.getIndexInTrip();
+        int max = dayPlanRepository.maxIndexInTrip(tripId);
+
+        // clamp a [1..max] (se c'è almeno 1 giorno)
+        to = Math.max(1, Math.min(to, Math.max(1, max)));
+        if (to == from)
+            return;
+
+        // 1) parcheggio il dayplan per evitare collisioni con UNIQUE (trip_id,
+        // index_in_trip)
+        dayPlanRepository.park(dayPlanId);
+
+        // 2) shift del blocco
+        if (to < from) {
+            // es. 5 -> 2 : porto su [2..4] di +1
+            dayPlanRepository.shiftUpRange(tripId, to, from - 1);
+        } else {
+            // es. 2 -> 5 : porto giù [3..5] di -1
+            dayPlanRepository.shiftDownRange(tripId, from + 1, to);
+        }
+
+        // 3) posiziono il dayplan al nuovo indice
+        dp.setIndexInTrip(to);
+        dayPlanRepository.save(dp);
+    }
 }

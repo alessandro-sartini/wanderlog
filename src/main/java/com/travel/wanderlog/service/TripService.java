@@ -1,9 +1,13 @@
 package com.travel.wanderlog.service;
 
+import com.travel.wanderlog.dto.dayPlan.DayPlanDto;
 import com.travel.wanderlog.dto.trip.TripCreateDto;
 import com.travel.wanderlog.dto.trip.TripDto;
+import com.travel.wanderlog.dto.trip.TripShowDto;
 import com.travel.wanderlog.dto.trip.TripUpdateDto;
 import com.travel.wanderlog.mapper.TripMapper;
+import com.travel.wanderlog.mapper.TripViewMapper;
+import com.travel.wanderlog.model.DayPlan;
 import com.travel.wanderlog.model.Trip;
 import com.travel.wanderlog.model.User;
 import com.travel.wanderlog.repository.TripRepository;
@@ -21,6 +25,7 @@ public class TripService {
     private final TripRepository tripRepository;
     private final UserRepository userRepository;
     private final TripMapper mapper;
+    private final TripViewMapper viewMapper;
 
     // lista per ownerId
     @Transactional
@@ -40,7 +45,7 @@ public class TripService {
     @Transactional
     public TripDto create(TripCreateDto dto) {
         User owner = userRepository.findByEmail("demo@travelsage.io")
-            .orElseThrow(() -> new IllegalStateException("Utente demo non trovato (profilo dev?)"));
+                .orElseThrow(() -> new IllegalStateException("Utente demo non trovato (profilo dev?)"));
 
         Trip entity = mapper.toEntity(dto);
         entity.setId(null);
@@ -61,7 +66,8 @@ public class TripService {
         return mapper.toDto(tripRepository.save(t));
     }
 
-    // REORDER: ?to=3 — tecnica parking per non violare la unique (owner_id, order_in_owner)
+    // REORDER: ?to=3 — tecnica parking per non violare la unique (owner_id,
+    // order_in_owner)
     @Transactional
     public void reorder(Long tripId, int to) {
         Trip trip = tripRepository.findById(tripId)
@@ -69,11 +75,12 @@ public class TripService {
 
         Long ownerId = trip.getOwner().getId();
         int from = trip.getOrderInOwner();
-        int max  = tripRepository.maxOrderInOwner(ownerId);
+        int max = tripRepository.maxOrderInOwner(ownerId);
 
         // clamp
         to = Math.max(1, Math.min(to, Math.max(1, max)));
-        if (to == from) return;
+        if (to == from)
+            return;
 
         // 1) parcheggio questo trip (order=0)
         tripRepository.park(tripId);
@@ -91,4 +98,14 @@ public class TripService {
         trip.setOrderInOwner(to);
         tripRepository.save(trip);
     }
+
+    @Transactional
+    public TripShowDto show(Long tripId) {
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new IllegalArgumentException("Trip non trovato: id=" + tripId));
+
+        List<DayPlan> days = tripRepository.findDaysByTripIdOrderByIndex(tripId);
+        return viewMapper.toShowDto(trip, days);
+    }
+
 }

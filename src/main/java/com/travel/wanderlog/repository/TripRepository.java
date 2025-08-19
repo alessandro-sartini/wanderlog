@@ -7,13 +7,18 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import com.travel.wanderlog.model.DayPlan;
 import com.travel.wanderlog.model.Trip;
 
 public interface TripRepository extends JpaRepository<Trip, Long> {
 
   // listing
   List<Trip> findByOwnerIdOrderByOrderInOwnerAsc(Long ownerId);
+
   List<Trip> findByOwnerEmailOrderByOrderInOwnerAsc(String email);
+
+  @Query("select dp from DayPlan dp where dp.trip.id = :tripId order by dp.indexInTrip asc")
+  List<DayPlan> findDaysByTripIdOrderByIndex(@Param("tripId") Long tripId);
 
   // max ordine per owner
   @Query("select coalesce(max(t.orderInOwner), 0) from Trip t where t.owner.id = :ownerId")
@@ -34,8 +39,8 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
          and t.orderInOwner <= :toOrder
       """)
   int shiftUpRange(@Param("ownerId") Long ownerId,
-                   @Param("fromOrder") int fromOrder,
-                   @Param("toOrder") int toOrder);
+      @Param("fromOrder") int fromOrder,
+      @Param("toOrder") int toOrder);
 
   // shift down range [from..to] => -1
   @Modifying(clearAutomatically = true, flushAutomatically = true)
@@ -47,8 +52,8 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
          and t.orderInOwner <= :toOrder
       """)
   int shiftDownRange(@Param("ownerId") Long ownerId,
-                     @Param("fromOrder") int fromOrder,
-                     @Param("toOrder") int toOrder);
+      @Param("fromOrder") int fromOrder,
+      @Param("toOrder") int toOrder);
 
   // compatta dopo delete (se ti serve)
   @Modifying(clearAutomatically = true, flushAutomatically = true)
@@ -59,5 +64,6 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
          and t.orderInOwner > :removedOrder
       """)
   int shiftDownAfter(@Param("ownerId") Long ownerId,
-                     @Param("removedOrder") int removedOrder);
+      @Param("removedOrder") int removedOrder);
+
 }

@@ -8,6 +8,7 @@ import com.travel.wanderlog.service.DayPlanService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -48,4 +49,13 @@ public class DayPlanController {
             @PathVariable Long dayPlanId) {
         return service.show(tripId, dayPlanId);
     }
+
+    @PostMapping("/{dayPlanId}/reorder")
+    public ResponseEntity<Void> reorder(@PathVariable Long tripId,
+            @PathVariable Long dayPlanId,
+            @RequestParam("to") int to) {
+        service.reorder(tripId, dayPlanId, to);
+        return ResponseEntity.noContent().build();
+    }
+
 }
