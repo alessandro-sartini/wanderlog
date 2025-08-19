@@ -2,89 +2,93 @@ package com.travel.wanderlog.service;
 
 import com.travel.wanderlog.dto.trip.TripCreateDto;
 import com.travel.wanderlog.dto.trip.TripDto;
-import com.travel.wanderlog.dto.trip.TripShowDto;
 import com.travel.wanderlog.dto.trip.TripUpdateDto;
 import com.travel.wanderlog.mapper.TripMapper;
-import com.travel.wanderlog.mapper.TripViewMapper;
 import com.travel.wanderlog.model.Trip;
-import com.travel.wanderlog.repository.DayPlanRepository;
+import com.travel.wanderlog.model.User;
 import com.travel.wanderlog.repository.TripRepository;
 import com.travel.wanderlog.repository.UserRepository;
-
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class TripService {
 
     private final TripRepository tripRepository;
-    private final DayPlanRepository dayPlanRepository;
-    private final TripMapper mapper;
-    private final TripViewMapper viewMapper;
     private final UserRepository userRepository;
+    private final TripMapper mapper;
 
-    /**
-     * Crea un Trip e setta l’owner (utente seed "demo@travelsage.io").
-     */
+    // lista per ownerId
+    @Transactional
+    public List<TripDto> listByOwner(Long ownerId) {
+        return tripRepository.findByOwnerIdOrderByOrderInOwnerAsc(ownerId)
+                .stream().map(mapper::toDto).toList();
+    }
+
+    // lista per email (dev/demo)
+    @Transactional
+    public List<TripDto> listByOwnerEmail(String email) {
+        return tripRepository.findByOwnerEmailOrderByOrderInOwnerAsc(email)
+                .stream().map(mapper::toDto).toList();
+    }
+
+    // create: owner = demo@travelsage.io (finché non c'è auth)
     @Transactional
     public TripDto create(TripCreateDto dto) {
-        var owner = userRepository.findByEmail("demo@travelsage.io")
-                .orElseThrow(() -> new IllegalStateException(
-                        "Utente demo mancante. Profilo 'dev' attivo e SeedConfig eseguito?"));
+        User owner = userRepository.findByEmail("demo@travelsage.io")
+            .orElseThrow(() -> new IllegalStateException("Utente demo non trovato (profilo dev?)"));
 
-        // Validazione base date
-        if (dto.startDate() != null && dto.endDate() != null && dto.endDate().isBefore(dto.startDate())) {
-            throw new IllegalArgumentException("endDate non può precedere startDate");
-        }
+        Trip entity = mapper.toEntity(dto);
+        entity.setId(null);
+        entity.setOwner(owner);
 
-        // Se il tuo TripMapper ha toEntity(dto, owner) puoi usarlo direttamente.
-        Trip entity = mapper.toEntity(dto, owner);
-        entity.setId(null);          // forza INSERT
-        // se hai @Version su Trip: entity.setVersion(null);
-        entity.setOwner(owner);      // evita owner_id NULL
+        int max = tripRepository.maxOrderInOwner(owner.getId());
+        entity.setOrderInOwner(max + 1); // append in coda
 
         Trip saved = tripRepository.save(entity);
         return mapper.toDto(saved);
     }
 
-    /**
-     * Patch/Update di un Trip esistente.
-     */
     @Transactional
     public TripDto update(Long id, TripUpdateDto dto) {
         Trip t = tripRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Trip non trovato: " + id));
+        mapper.updateFromDto(dto, t);
+        return mapper.toDto(tripRepository.save(t));
+    }
 
-        if (dto.startDate() != null && dto.endDate() != null && dto.endDate().isBefore(dto.startDate())) {
-            throw new IllegalArgumentException("endDate non può precedere startDate");
+    // REORDER: ?to=3 — tecnica parking per non violare la unique (owner_id, order_in_owner)
+    @Transactional
+    public void reorder(Long tripId, int to) {
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new IllegalArgumentException("Trip non trovato: " + tripId));
+
+        Long ownerId = trip.getOwner().getId();
+        int from = trip.getOrderInOwner();
+        int max  = tripRepository.maxOrderInOwner(ownerId);
+
+        // clamp
+        to = Math.max(1, Math.min(to, Math.max(1, max)));
+        if (to == from) return;
+
+        // 1) parcheggio questo trip (order=0)
+        tripRepository.park(tripId);
+
+        // 2) sposto il blocco
+        if (to < from) {
+            // muovo SU: [to .. from-1] +1
+            tripRepository.shiftUpRange(ownerId, to, from - 1);
+        } else {
+            // muovo GIÙ: [from+1 .. to] -1
+            tripRepository.shiftDownRange(ownerId, from + 1, to);
         }
 
-        mapper.updateFromDto(dto, t);      // MapStruct: aggiorna solo i non-null
-        Trip saved = tripRepository.save(t);
-        return mapper.toDto(saved);
-    }
-
-    /**
-     * Show del Trip: include i DayPlan ordinati per indexInTrip.
-     */
-    @Transactional
-    public TripShowDto show(Long id) {
-        Trip t = tripRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Trip non trovato: id=" + id));
-
-        var days = dayPlanRepository.findByTripIdOrderByIndexInTripAsc(id);
-        return viewMapper.toShowDto(t, days);
-    }
-
-    /**
-     * Get minimale del Trip (solo TripDto).
-     */
-    @Transactional
-    public TripDto getById(Long id) {
-        Trip t = tripRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Trip non trovato: " + id));
-        return mapper.toDto(t);
+        // 3) posiziono il trip a 'to'
+        trip.setOrderInOwner(to);
+        tripRepository.save(trip);
     }
 }

@@ -1,43 +1,50 @@
-// TripController.java  (aggiunte PATCH + SHOW)
 package com.travel.wanderlog.controller;
 
 import com.travel.wanderlog.dto.trip.TripCreateDto;
 import com.travel.wanderlog.dto.trip.TripDto;
-import com.travel.wanderlog.dto.trip.TripShowDto;
 import com.travel.wanderlog.dto.trip.TripUpdateDto;
 import com.travel.wanderlog.service.TripService;
-import jakarta.validation.Valid;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URI;
+import java.util.List;
+
 @RestController
-@RequestMapping("/api/trips")
 @RequiredArgsConstructor
+@RequestMapping("/api/trips")
 public class TripController {
 
-    private final TripService service;
+    private final TripService tripService;
+
+    // per dev: owner = demo@travelsage.io
+    @GetMapping
+    public List<TripDto> listForDemo() {
+        return tripService.listByOwnerEmail("demo@travelsage.io");
+    }
+
+    @GetMapping("/owner/{ownerId}")
+    public List<TripDto> listByOwner(@PathVariable Long ownerId) {
+        return tripService.listByOwner(ownerId);
+    }
 
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public TripDto create(@Valid @RequestBody TripCreateDto dto) {
-        return service.create(dto);
+    public ResponseEntity<TripDto> create(@RequestBody TripCreateDto dto) {
+        TripDto created = tripService.create(dto);
+        return ResponseEntity.created(URI.create("/api/trips/" + created.id())).body(created);
     }
 
-    @GetMapping("/{id}")
-    public TripDto get(@PathVariable Long id) {
-        return service.getById(id);
-    }
-
-    // PATCH parziale
     @PatchMapping("/{id}")
     public TripDto update(@PathVariable Long id, @RequestBody TripUpdateDto dto) {
-        return service.update(id, dto);
+        return tripService.update(id, dto);
     }
 
-    // SHOW: + giorni
-    @GetMapping("/{id}/show")
-    public TripShowDto show(@PathVariable Long id) {
-        return service.show(id);
+    // REORDER: POST /api/trips/{id}/reorder?to=3
+    @PostMapping("/{id}/reorder")
+    public ResponseEntity<Void> reorder(@PathVariable Long id, @RequestParam("to") int to) {
+        tripService.reorder(id, to);
+        return ResponseEntity.noContent().build();
     }
 }

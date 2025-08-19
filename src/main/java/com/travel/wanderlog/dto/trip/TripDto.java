@@ -10,4 +10,5 @@ public record TripDto(
     LocalDate startDate,
     LocalDate endDate,
     VisibilityDto visibility
+    
 ) {}
