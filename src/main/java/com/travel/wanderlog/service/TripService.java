@@ -16,7 +16,8 @@ import com.travel.wanderlog.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 @Service
@@ -33,6 +34,18 @@ public class TripService {
     public List<TripDto> findAll() {
         return tripRepository.findAll()
                 .stream().map(mapper::toDto).toList();
+    }
+
+    @Transactional
+    public Page<TripDto> listByOwnerPage(Long ownerId, Pageable pageable) {
+        return tripRepository.findByOwnerId(ownerId, pageable)
+                .map(mapper::toDto);
+    }
+
+    @Transactional
+    public Page<TripDto> listByOwnerEmailPage(String email, Pageable pageable) {
+        return tripRepository.findByOwnerEmail(email, pageable)
+                .map(mapper::toDto);
     }
 
     // lista per ownerId

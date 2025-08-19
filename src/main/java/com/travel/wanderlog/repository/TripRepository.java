@@ -6,11 +6,17 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import com.travel.wanderlog.model.DayPlan;
 import com.travel.wanderlog.model.Trip;
 
 public interface TripRepository extends JpaRepository<Trip, Long> {
+
+  Page<Trip> findByOwnerId(Long ownerId, Pageable pageable);
+
+  Page<Trip> findByOwnerEmail(String email, Pageable pageable);
 
   // listing
   List<Trip> findByOwnerIdOrderByOrderInOwnerAsc(Long ownerId);
@@ -66,8 +72,4 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
   int shiftDownAfter(@Param("ownerId") Long ownerId,
       @Param("removedOrder") int removedOrder);
 
-
-
-
-      
 }
