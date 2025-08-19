@@ -14,6 +14,16 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
 
   void deleteAllByDayPlanId(Long dayPlanId);
 
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query("""
+      delete from Activity a
+       where a.dayPlan.id in (
+         select d.id from DayPlan d
+          where d.trip.id = :tripId
+       )
+      """)
+  int deleteAllByTripId(@Param("tripId") Long tripId);
+
   boolean existsByDayPlanIdAndOrderInDay(Long dayPlanId, Integer orderInDay);
 
   @Modifying

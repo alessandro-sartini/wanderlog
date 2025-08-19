@@ -215,7 +215,8 @@ public class DayPlanService {
 
     @Transactional
     public void reorder(Long tripId, Long dayPlanId, int to) {
-        var dp = dayPlanRepository.findById(dayPlanId)
+
+        DayPlan dp = dayPlanRepository.findById(dayPlanId)
                 .orElseThrow(() -> new IllegalArgumentException("DayPlan non trovato: id=" + dayPlanId));
 
         if (!dp.getTrip().getId().equals(tripId)) {

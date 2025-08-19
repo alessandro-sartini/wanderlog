@@ -1,6 +1,5 @@
 package com.travel.wanderlog.service;
 
-import com.travel.wanderlog.dto.dayPlan.DayPlanDto;
 import com.travel.wanderlog.dto.trip.TripCreateDto;
 import com.travel.wanderlog.dto.trip.TripDto;
 import com.travel.wanderlog.dto.trip.TripShowDto;
@@ -10,6 +9,8 @@ import com.travel.wanderlog.mapper.TripViewMapper;
 import com.travel.wanderlog.model.DayPlan;
 import com.travel.wanderlog.model.Trip;
 import com.travel.wanderlog.model.User;
+import com.travel.wanderlog.repository.ActivityRepository;
+import com.travel.wanderlog.repository.DayPlanRepository;
 import com.travel.wanderlog.repository.TripRepository;
 import com.travel.wanderlog.repository.UserRepository;
 import jakarta.transaction.Transactional;
@@ -23,9 +24,16 @@ import java.util.List;
 public class TripService {
 
     private final TripRepository tripRepository;
+    private final DayPlanRepository dayPlanRepository;
+    private final ActivityRepository activityRepository;
     private final UserRepository userRepository;
     private final TripMapper mapper;
     private final TripViewMapper viewMapper;
+
+    public List<TripDto> findAll() {
+        return tripRepository.findAll()
+                .stream().map(mapper::toDto).toList();
+    }
 
     // lista per ownerId
     @Transactional
@@ -106,6 +114,28 @@ public class TripService {
 
         List<DayPlan> days = tripRepository.findDaysByTripIdOrderByIndex(tripId);
         return viewMapper.toShowDto(trip, days);
+    }
+
+    @Transactional
+    public void delete(Long tripId) {
+        // 1) prendo il trip e i dati necessari
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new IllegalArgumentException("Trip non trovato: id=" + tripId));
+
+        Long ownerId = trip.getOwner().getId();
+        int removedOrder = trip.getOrderInOwner();
+
+        // 1) Activities del trip
+        activityRepository.deleteAllByTripId(tripId);
+
+        // 2) DayPlan del trip
+        dayPlanRepository.deleteAllByTripId(tripId);
+
+        // 3) Trip
+        tripRepository.deleteById(tripId);
+
+        // 4) Ricompatta ordini degli altri trip dello stesso owner
+        tripRepository.shiftDownAfter(ownerId, removedOrder);
     }
 
 }

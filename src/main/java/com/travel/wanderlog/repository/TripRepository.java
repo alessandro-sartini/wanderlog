@@ -66,4 +66,8 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
   int shiftDownAfter(@Param("ownerId") Long ownerId,
       @Param("removedOrder") int removedOrder);
 
+
+
+
+      
 }

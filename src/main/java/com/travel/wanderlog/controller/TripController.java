@@ -7,6 +7,8 @@ import com.travel.wanderlog.dto.trip.TripUpdateDto;
 import com.travel.wanderlog.service.TripService;
 
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,6 +26,11 @@ public class TripController {
     @GetMapping
     public List<TripDto> listForDemo() {
         return tripService.listByOwnerEmail("demo@travelsage.io");
+    }
+
+    @GetMapping("/all")
+    public List<TripDto> All() {
+        return tripService.findAll();
     }
 
     @GetMapping("/owner/{ownerId}")
@@ -52,6 +59,12 @@ public class TripController {
     @GetMapping("/{tripId}")
     public TripShowDto show(@PathVariable Long tripId) {
         return tripService.show(tripId);
+    }
+
+    @DeleteMapping("/{tripId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable Long tripId) {
+        tripService.delete(tripId);
     }
 
 }
