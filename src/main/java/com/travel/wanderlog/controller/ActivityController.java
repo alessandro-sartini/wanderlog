@@ -2,6 +2,7 @@ package com.travel.wanderlog.controller;
 
 import com.travel.wanderlog.dto.activity.ActivityCreateDto;
 import com.travel.wanderlog.dto.activity.ActivityDto;
+import com.travel.wanderlog.dto.activity.ActivityMoveDto;
 import com.travel.wanderlog.dto.activity.ActivityUpdateDto;
 import com.travel.wanderlog.dto.order.ActivityReorderDto;
 import com.travel.wanderlog.dto.place.PlaceAttachDto;
@@ -92,6 +93,15 @@ public class ActivityController {
             @PathVariable Long activityId,
             @RequestBody @Valid PlaceAttachDto body) {
         return service.attachPlace(tripId, dayPlanId, activityId, body);
+    }
+
+    // PATCH /api/trips/{tripId}/days/{fromDayId}/activities/{activityId}/move
+    @PatchMapping("/{activityId}/move")
+    public ActivityDto move(@PathVariable Long tripId,
+            @PathVariable("dayPlanId") Long fromDayId,
+            @PathVariable Long activityId,
+            @RequestBody @Valid ActivityMoveDto dto) {
+        return service.move(tripId, fromDayId, activityId, dto);
     }
 
 }

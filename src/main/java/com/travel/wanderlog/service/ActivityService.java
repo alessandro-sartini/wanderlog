@@ -2,6 +2,7 @@ package com.travel.wanderlog.service;
 
 import com.travel.wanderlog.dto.activity.ActivityCreateDto;
 import com.travel.wanderlog.dto.activity.ActivityDto;
+import com.travel.wanderlog.dto.activity.ActivityMoveDto;
 import com.travel.wanderlog.dto.activity.ActivityUpdateDto;
 import com.travel.wanderlog.dto.order.ActivityReorderDto;
 import com.travel.wanderlog.dto.place.PlaceAttachDto;
@@ -272,4 +273,70 @@ public class ActivityService {
 
         return mapper.toDto(activityRepository.save(a));
     }
+
+    @Transactional
+    public ActivityDto move(Long tripId,
+            Long fromDayId,
+            Long activityId,
+            ActivityMoveDto dto) {
+
+        Activity activity = activityRepository.findById(activityId)
+                .orElseThrow(() -> new IllegalArgumentException("Activity non trovata: " + activityId));
+
+        DayPlan fromDay = dayPlanRepository.findById(fromDayId)
+                .orElseThrow(() -> new IllegalArgumentException("DayPlan origine non trovato: " + fromDayId));
+
+        if (!activity.getDayPlan().getId().equals(fromDayId)) {
+            throw new IllegalArgumentException("Activity non appartiene al day plan di origine");
+        }
+        if (!fromDay.getTrip().getId().equals(tripId)) {
+            throw new IllegalArgumentException("DayPlan origine non appartiene al trip indicato");
+        }
+
+        Long toDayId = dto.toDayId();
+        DayPlan toDay = dayPlanRepository.findById(toDayId)
+                .orElseThrow(() -> new IllegalArgumentException("DayPlan destinazione non trovato: " + toDayId));
+
+        if (!toDay.getTrip().getId().equals(tripId)) {
+            throw new IllegalArgumentException("DayPlan destinazione non appartiene al trip indicato");
+        }
+
+        // Se stesso giorno -> delega a reorder
+        if (fromDayId.equals(toDayId)) {
+            Integer target = dto.targetOrder();
+            if (target == null) {
+                int max = activityRepository.maxOrderInDay(fromDayId);
+                target = max + 1;
+            }
+            return reorder(tripId, fromDayId, activityId, new ActivityReorderDto(target));
+        }
+
+        // MOVE tra giorni diversi
+        int fromOrder = activity.getOrderInDay();
+        int maxTo = activityRepository.maxOrderInDay(toDayId);
+
+        int target = dto.targetOrder() != null ? dto.targetOrder() : (maxTo + 1);
+        // clamp: può essere 1..(maxTo+1)
+        target = Math.max(1, Math.min(target, maxTo + 1));
+
+        // 1) Parcheggio (order=0) per evitare collisioni unique (day_plan_id,
+        // order_in_day)
+        activityRepository.park(activityId);
+
+        // 2) Compatta il giorno di origine
+        activityRepository.shiftDownAfter(fromDayId, fromOrder);
+
+        // 3) Apre spazio nel giorno di destinazione
+        if (target <= maxTo) {
+            activityRepository.shiftUpRange(toDayId, target, maxTo);
+        }
+
+        // 4) Applica nuova destinazione/ordine
+        activity.setDayPlan(toDay);
+        activity.setOrderInDay(target);
+        Activity saved = activityRepository.save(activity);
+
+        return mapper.toDto(saved);
+    }
+
 }
