@@ -4,6 +4,7 @@ import com.travel.wanderlog.dto.activity.ActivityCreateDto;
 import com.travel.wanderlog.dto.activity.ActivityDto;
 import com.travel.wanderlog.dto.activity.ActivityUpdateDto;
 import com.travel.wanderlog.dto.order.ActivityReorderDto;
+import com.travel.wanderlog.dto.place.PlaceAttachDto;
 import com.travel.wanderlog.mapper.ActivityMapper;
 import com.travel.wanderlog.model.Activity;
 import com.travel.wanderlog.model.DayPlan;
@@ -225,4 +226,50 @@ public class ActivityService {
         return mapper.toDto(saved);
     }
 
+    @Transactional
+    public ActivityDto createFromPlace(Long tripId, Long dayPlanId, PlaceAttachDto body) {
+        DayPlan dp = dayPlanRepository.findById(dayPlanId)
+                .orElseThrow(() -> new IllegalArgumentException("DayPlan non trovato: " + dayPlanId));
+        if (!dp.getTrip().getId().equals(tripId)) {
+            throw new IllegalArgumentException("DayPlan non appartiene al trip " + tripId);
+        }
+
+        int nextOrder = activityRepository.maxOrderInDay(dayPlanId) + 1;
+
+        Activity a = Activity.builder()
+                .dayPlan(dp)
+                .name(body.name())
+                .orderInDay(nextOrder)
+                .placeId(body.provider() + ":" + body.providerPlaceId())
+                .placeName(body.name())
+                .placeAddress(body.formattedAddress())
+                .placeLatitude(body.lat())
+                .placeLongitude(body.lon())
+                .build();
+
+        Activity saved = activityRepository.save(a);
+        return mapper.toDto(saved);
+    }
+
+    @Transactional
+    public ActivityDto attachPlace(Long tripId, Long dayPlanId, Long activityId, PlaceAttachDto body) {
+        Activity a = activityRepository.findById(activityId)
+                .orElseThrow(() -> new IllegalArgumentException("Activity non trovata: " + activityId));
+
+        if (!a.getDayPlan().getId().equals(dayPlanId) ||
+                !a.getDayPlan().getTrip().getId().equals(tripId)) {
+            throw new IllegalArgumentException("L'activity non appartiene al dayPlan/trip indicato");
+        }
+
+        a.setPlaceId(body.provider() + ":" + body.providerPlaceId());
+        a.setPlaceName(body.name());
+        a.setPlaceAddress(body.formattedAddress());
+        a.setPlaceLatitude(body.lat());
+        a.setPlaceLongitude(body.lon());
+        if (a.getName() == null || a.getName().isBlank()) {
+            a.setName(body.name());
+        }
+
+        return mapper.toDto(activityRepository.save(a));
+    }
 }

@@ -94,4 +94,5 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
   // Conta quante attività ha il giorno
   long countByDayPlanId(Long dayPlanId);
 
+  
 }

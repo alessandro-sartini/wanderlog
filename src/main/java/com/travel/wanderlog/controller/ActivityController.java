@@ -4,12 +4,15 @@ import com.travel.wanderlog.dto.activity.ActivityCreateDto;
 import com.travel.wanderlog.dto.activity.ActivityDto;
 import com.travel.wanderlog.dto.activity.ActivityUpdateDto;
 import com.travel.wanderlog.dto.order.ActivityReorderDto;
+import com.travel.wanderlog.dto.place.PlaceAttachDto;
 import com.travel.wanderlog.service.ActivityService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URI;
 import java.util.List;
 
 @RestController
@@ -70,4 +73,25 @@ public class ActivityController {
             @Valid @RequestBody ActivityReorderDto dto) {
         return service.reorder(tripId, dayPlanId, activityId, dto);
     }
+
+    @PostMapping("/from-place")
+    public ResponseEntity<ActivityDto> createFromPlace(
+            @PathVariable Long tripId,
+            @PathVariable Long dayPlanId,
+            @RequestBody @Valid PlaceAttachDto body) {
+        ActivityDto created = service.createFromPlace(tripId, dayPlanId, body);
+        URI location = URI.create(String.format("/api/trips/%d/days/%d/activities/%d",
+                tripId, dayPlanId, created.id()));
+        return ResponseEntity.created(location).body(created);
+    }
+
+    @PatchMapping("/{activityId}/place")
+    public ActivityDto attachPlace(
+            @PathVariable Long tripId,
+            @PathVariable Long dayPlanId,
+            @PathVariable Long activityId,
+            @RequestBody @Valid PlaceAttachDto body) {
+        return service.attachPlace(tripId, dayPlanId, activityId, body);
+    }
+
 }

@@ -41,7 +41,7 @@ public class Activity {
     private String placeAddress;
 
     @Column(name = "place_place_id", length = 128)
-    private String placePlaceId;
+    private String placeId;
 
     @Column(name = "place_latitude")
     private Double placeLatitude;

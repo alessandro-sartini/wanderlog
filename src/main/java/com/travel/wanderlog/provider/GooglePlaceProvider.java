@@ -31,8 +31,7 @@ public class GooglePlaceProvider implements PlaceSearchProvider {
 
     @Override
     public List<PlaceDto> search(String query, Double lat, Double lon, Integer limit) {
-        // Esempio: /textsearch/json?query=...&key=... (aggiungi location bias se vuoi)
-        // Mappa la response ai campi PlaceDto come hai fatto per Nominatim.
+        // Esempio: /textsearch/json?query=...&key=... .
         throw new UnsupportedOperationException("TODO: implementami quando attivi Google");
     }
 
@@ -44,7 +43,7 @@ public class GooglePlaceProvider implements PlaceSearchProvider {
 
     @Override
     public Optional<PlaceDto> reverse(double lat, double lon) {
-        // Google non ha un reverse diretto nei Places; puoi usare Geocoding se vuoi.
+        // Google non ha un reverse diretto nei Places; puoi usare Geocoding.
         throw new UnsupportedOperationException("Non supportato in Places; usa Geocoding API");
     }
 }

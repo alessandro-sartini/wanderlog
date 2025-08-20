@@ -11,8 +11,10 @@ public record ActivityDto(
   Integer durationMinutes,
   String placeName,
   String placeAddress,
-  String placePlaceId,
+  String placeId,
   Double placeLatitude,
   Double placeLongitude,
   Integer orderInDay
+
+  
 ) {}
