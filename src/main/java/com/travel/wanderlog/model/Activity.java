@@ -3,6 +3,8 @@ package com.travel.wanderlog.model;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalTime;
+import java.util.HashSet;
+import java.util.Set;
 import java.time.Instant;
 
 @Entity
@@ -56,4 +58,9 @@ public class Activity {
 
     @Column(name = "updated_at", insertable = false, updatable = false)
     private Instant updatedAt;
+
+    @ManyToMany
+    @JoinTable(name = "activity_tags", joinColumns = @JoinColumn(name = "activity_id"), inverseJoinColumns = @JoinColumn(name = "tag_id"))
+    private Set<Tag> tags = new HashSet<>();
+
 }
