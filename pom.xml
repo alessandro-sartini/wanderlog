@@ -19,42 +19,17 @@
 
   <properties>
     <java.version>21</java.version>
+
+    <!-- VERSIONI CENTRALI -->
     <mapstruct.version>1.6.3</mapstruct.version>
+    <lombok.version>1.18.34</lombok.version>
+    <lombok.mapstruct.binding.version>0.2.0</lombok.mapstruct.binding.version>
     <springdoc.version>2.8.9</springdoc.version>
     <testcontainers.version>1.20.2</testcontainers.version>
   </properties>
-<build>
-    <plugins>
-        <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-compiler-plugin</artifactId>
-            <version>3.13.0</version>
-            <configuration>
-                <source>${java.version}</source>
-                <target>${java.version}</target>
-                <annotationProcessorPaths>
-                    <path>
-                        <groupId>org.mapstruct</groupId>
-                        <artifactId>mapstruct-processor</artifactId>
-                        <version>${mapstruct.version}</version>
-                    </path>
-                    <path>
-                        <groupId>org.projectlombok</groupId>
-                        <artifactId>lombok</artifactId>
-                        <version>${lombok.version}</version>
-                    </path>
-                    <path>
-                        <groupId>org.projectlombok</groupId>
-                        <artifactId>lombok-mapstruct-binding</artifactId>
-                        <version>0.2.0</version>
-                    </path>
-                </annotationProcessorPaths>
-            </configuration>
-        </plugin>
-    </plugins>
-</build>
+
   <dependencies>
-    <!-- Core -->
+    <!-- Spring core -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-web</artifactId>
@@ -76,27 +51,21 @@
       <artifactId>spring-boot-starter-actuator</artifactId>
     </dependency>
 
-    <!-- JWT / OAuth2 Resource Server + JOSE (Nimbus) -->
+    <!-- OAuth2 Resource Server -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
     </dependency>
-    <!-- <dependency>
-      <groupId>org.springframework.security</groupId>
-      <artifactId>spring-security-oauth2-jose</artifactId>
-    </dependency> -->
 
     <!-- Migrazioni -->
     <dependency>
       <groupId>org.flywaydb</groupId>
       <artifactId>flyway-core</artifactId>
     </dependency>
-
     <dependency>
       <groupId>org.flywaydb</groupId>
       <artifactId>flyway-mysql</artifactId>
     </dependency>
-
 
     <!-- Cache -->
     <dependency>
@@ -108,48 +77,34 @@
       <artifactId>caffeine</artifactId>
     </dependency>
 
-    <!-- OpenAPI / Swagger UI -->
+    <!-- OpenAPI / Swagger -->
     <dependency>
       <groupId>org.springdoc</groupId>
       <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
       <version>${springdoc.version}</version>
     </dependency>
 
-    <!-- MapStruct -->
+    <!-- MapStruct (API) -->
     <dependency>
       <groupId>org.mapstruct</groupId>
       <artifactId>mapstruct</artifactId>
       <version>${mapstruct.version}</version>
     </dependency>
 
-    <!-- Lombok -->
+    <!-- Lombok (lib) -->
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
-      <optional>true</optional>
+      <version>${lombok.version}</version>
+      <scope>provided</scope>
     </dependency>
 
-    <!-- Driver DB: SCEGLI UNO -->
-    <!-- PostgreSQL (consigliato) -->
-    <!-- <dependency>
-      <groupId>org.postgresql</groupId>
-      <artifactId>postgresql</artifactId>
-      <scope>runtime</scope>
-    </dependency> -->
-    <!-- Oppure MySQL -->
-    
+    <!-- DB driver MySQL -->
     <dependency>
       <groupId>com.mysql</groupId>
       <artifactId>mysql-connector-j</artifactId>
       <scope>runtime</scope>
     </dependency>
-   
-
-    <!-- Tipi extra per JSONB (opzionale, utile con Postgres) -->
-    <!-- <dependency>
-      <groupId>com.vladmihalcea</groupId>
-      <artifactId>hibernate-types-60</artifactId>
-    </dependency> -->
 
     <!-- Dev only -->
     <dependency>
@@ -183,7 +138,7 @@
       <scope>test</scope>
     </dependency>
 
-    <!-- Metadata configurazioni (IDE auto-complete) -->
+    <!-- Metadata configurazioni -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-configuration-processor</artifactId>
@@ -191,17 +146,37 @@
     </dependency>
   </dependencies>
 
-  
-
-  <!-- gestita da Spring Boot BOM; la metto se il tuo IDE la chiede -->
-  <dependencyManagement>
-    <dependencies>
-      <dependency>
-        <groupId>org.projectlombok</groupId>
-        <artifactId>lombok</artifactId>
-        <version>1.18.34</version>
-        <scope>compile</scope>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.13.0</version>
+        <configuration>
+          <source>${java.version}</source>
+          <target>${java.version}</target>
+          <annotationProcessorPaths>
+            <!-- MapStruct processor -->
+            <path>
+              <groupId>org.mapstruct</groupId>
+              <artifactId>mapstruct-processor</artifactId>
+              <version>${mapstruct.version}</version>
+            </path>
+            <!-- Lombok processor -->
+            <path>
+              <groupId>org.projectlombok</groupId>
+              <artifactId>lombok</artifactId>
+              <version>${lombok.version}</version>
+            </path>
+            <!-- Binding Lombok+MapStruct (necessario con Lombok) -->
+            <path>
+              <groupId>org.projectlombok</groupId>
+              <artifactId>lombok-mapstruct-binding</artifactId>
+              <version>${lombok.mapstruct.binding.version}</version>
+            </path>
+          </annotationProcessorPaths>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 </project>

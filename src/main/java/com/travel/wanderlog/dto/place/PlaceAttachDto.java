@@ -4,10 +4,25 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 public record PlaceAttachDto(
-    @NotBlank String provider,          // "nominatim" (o "google" domani)
-    @NotBlank String providerPlaceId,   // es. "relation:1834818"
-    @NotBlank String name,              // es. "Colosseo"
-    String formattedAddress,            // indirizzo formattato
-    @NotNull Double lat,
-    @NotNull Double lon
-) {}
+        @NotBlank String provider, // "nominatim" (o "google" domani)
+        @NotBlank String providerPlaceId, // es. "relation:1834818"
+        @NotBlank String name, // es. "Colosseo"
+        String formattedAddress, // indirizzo formattato
+        @NotNull Double lat,
+        @NotNull Double lon) {
+    public PlaceDto toPlaceDto() {
+        return new PlaceDto(
+                provider,
+                providerPlaceId,
+                name,
+                formattedAddress,
+                lat,
+                lon,
+                null, // categories
+                null, // rating
+                null, // userRatingsTotal
+                null, // priceLevel
+                null // photos
+        );
+    }
+}
