@@ -8,9 +8,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.travel.wanderlog.dto.place.PlaceDto;
+import com.travel.wanderlog.model.Place;
 import com.travel.wanderlog.service.PlaceCatalogService;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 
 @RestController
 @RequestMapping("/api/places")
@@ -23,8 +26,14 @@ class PlaceCatalogController {
       @RequestParam(required = false) String text,
       @RequestParam(required = false) Double lat,
       @RequestParam(required = false) Double lon,
-      @RequestParam(defaultValue = "10") int limit
-  ) {
+      @RequestParam(defaultValue = "10") int limit) {
     return catalog.searchLocal(text, lat, lon, limit);
   }
+
+  @PostMapping("/save/place")
+  public Place savePlace(@RequestBody PlaceDto entity) {
+
+    return catalog.save(entity);
+  }
+
 }

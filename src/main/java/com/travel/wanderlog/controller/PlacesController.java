@@ -55,6 +55,39 @@ public class PlacesController {
         }
         return out;
     }
+    // @GetMapping("/search")
+    // public List<PlaceDto> searchTest(
+    //         @RequestParam(name = "term") String term,
+    //         @RequestParam(required = false) Double lat,
+    //         @RequestParam(required = false) Double lon,
+    //         @RequestParam(defaultValue = "10") Integer limit,
+    //         @RequestParam(defaultValue = "false") boolean onlyLocal) {
+
+    //     int lim = Math.max(1, limit);
+    //     List<PlaceDto> local = catalog.searchLocalLatLon(term, lat, lon, lim);
+
+    //     if (onlyLocal || local.size() >= lim) {
+    //         return local; // niente chiamata esterna
+    //     }
+
+    //     int remaining = lim - local.size();
+    //     List<PlaceDto> external = provider.search(term, lat, lon, remaining);
+
+    //     // merge evitando duplicati per chiave provider:providerPlaceId
+    //     Set<String> seen = new HashSet<>();
+    //     List<PlaceDto> out = new ArrayList<>(lim);
+    //     for (PlaceDto p : local) {
+    //         if (seen.add(p.provider() + ":" + p.providerPlaceId()))
+    //             out.add(p);
+    //     }
+    //     for (PlaceDto p : external) {
+    //         if (seen.add(p.provider() + ":" + p.providerPlaceId()))
+    //             out.add(p);
+    //         if (out.size() >= lim)
+    //             break;
+    //     }
+    //     return out;
+    // }
 
   
 

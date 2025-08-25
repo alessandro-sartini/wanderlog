@@ -18,8 +18,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class PlaceCatalogService {
     private final PlaceRepository repo;
-    private final PlaceMapper mapper;           // se lo usi
-    private final PlaceService placeProvider;   // il provider (Nominatim/Google) per i details
+    private final PlaceMapper mapper; // se lo usi
+    private final PlaceService placeProvider; // il provider (Nominatim/Google) per i details
 
     @Transactional
     public PlaceDto upsertFromProvider(String provider, String providerPlaceId) {
@@ -31,11 +31,12 @@ public class PlaceCatalogService {
 
         // 2) arricchisci con details dal provider
         PlaceDto full = placeProvider.details(providerPlaceId)
-            .orElseThrow(() -> new IllegalArgumentException("Place non trovato sul provider: " + providerPlaceId));
+                .orElseThrow(() -> new IllegalArgumentException("Place non trovato sul provider: " + providerPlaceId));
 
         // 3) salva
         Place entity = mapper.toEntity(full);
-        // IMPORTANTE: imposta provider dal parametro (alcuni provider non lo rimandano in details)
+        // IMPORTANTE: imposta provider dal parametro (alcuni provider non lo rimandano
+        // in details)
         entity.setProvider(provider);
         entity.setProviderPlaceId(providerPlaceId);
 
@@ -43,11 +44,29 @@ public class PlaceCatalogService {
         return mapper.toDto(saved);
     }
 
-
-      public List<PlaceDto> searchLocal(String term, Double lat, Double lon, int limit) {
+    public List<PlaceDto> searchLocal(String term, Double lat, Double lon, int limit) {
         return repo.searchLocal(term).stream()
                 .limit(limit)
                 .map(mapper::toDto)
                 .toList();
+    }
+
+    // public List<PlaceDto> searchLocalLatLon(String term, Double lat, Double lon, int limit) {
+    //     return repo.searchLocalLatLng(term, lat, lon).stream()
+    //             .limit(limit)
+    //             .map(mapper::toDto)
+    //             .toList();
+    // }
+
+    public Place save(PlaceDto placeDto) {
+        // 1. Converti il DTO in un'entità
+        Place placeEntity = mapper.toEntity(placeDto);
+
+        // 2. Salva l'entità nel repository
+        Place savedPlace = repo.save(placeEntity);
+
+        // 3. return mapper.toDto(savedPlace);
+
+        return savedPlace;
     }
 }

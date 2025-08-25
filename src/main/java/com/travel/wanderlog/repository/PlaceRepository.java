@@ -11,6 +11,8 @@ import com.travel.wanderlog.model.Place;
 
 public interface PlaceRepository extends JpaRepository<Place, Long> {
 
+  // Optional<Place> existingByProviderPlaceId();
+
   Optional<Place> findByProviderAndProviderPlaceId(String provider, String providerPlaceId);
 
   // search locale semplice su name/address; aggiungi lat/lon se vuoi filtro
@@ -23,6 +25,17 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
          order by p.id desc
       """)
   List<Place> searchLocal(String term);
+
+  // @Query("""
+  //       select p from Place p
+  //        where (:term is null or :term = ''
+  //              or lower(p.name) like lower(concat('%',:term,'%'))
+  //              or lower(p.formattedAddress) like lower(concat('%',:term,'%')))
+  //               or p.lat like :lat
+  //               or p.lon like :lon
+  //        order by p.id desc
+  //     """)
+  // List<Place> searchLocalLatLng(String term, Double lat, Double lon);
 
   // DB-first: cerca per testo (name/address) e in area (bounding box)
   @Query("""

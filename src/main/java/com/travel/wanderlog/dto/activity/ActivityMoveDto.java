@@ -1,7 +1,5 @@
 package com.travel.wanderlog.dto.activity;
 
-import org.hibernate.id.IntegralDataTypeHolder;
-
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
